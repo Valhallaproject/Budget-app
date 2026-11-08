@@ -1,10 +1,7 @@
+import Dashboard from "./pages/Dashboard";
+
 function App() {
-  return (
-    <div style={{ padding: "20px" }}>
-      <h1>Budget App</h1>
-      <p>Version 0.1</p>
-    </div>
-  );
+  return <Dashboard />;
 }
 
 export default App;
