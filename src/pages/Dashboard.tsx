@@ -7,9 +7,24 @@ interface Transaction {
   date: string;
 }
 
+interface RecurringTransaction {
+  id?: number;
+  label: string;
+  amount: number;
+  dayOfMonth: number;
+}
+
 export default function Dashboard() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+ const [recurringTransactions, setRecurringTransactions] =
+  useState<RecurringTransaction[]>([]);
+const [forecastBalance, setForecastBalance] = useState(0);
+const [recurringLabel, setRecurringLabel] = useState("");
+const [recurringAmount, setRecurringAmount] = useState("");
+const [dayOfMonth, setDayOfMonth] = useState("");
+const [remainingRecurringAmount, setRemainingRecurringAmount] =
+  useState(0);
 
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
@@ -28,9 +43,35 @@ export default function Dashboard() {
     setBalance(total);
   };
 
-  useEffect(() => {
-    loadTransactions();
-  }, []);
+ useEffect(() => {
+  loadTransactions();
+  loadRecurringTransactions();
+}, []);
+
+useEffect(() => {
+  const today = new Date().getDate();
+
+  const remainingRecurring =
+    recurringTransactions.filter(
+      (item) =>
+        item.dayOfMonth >= today
+    );
+
+  const recurringTotal =
+    remainingRecurring.reduce(
+      (sum, item) =>
+        sum + Number(item.amount),
+      0
+    );
+
+  setRemainingRecurringAmount(
+    recurringTotal
+  );
+
+  setForecastBalance(
+    balance - recurringTotal
+  );
+}, [balance, recurringTransactions]);
 
   const addTransaction = async () => {
     if (!label.trim() || !amount) {
@@ -38,11 +79,9 @@ export default function Dashboard() {
     }
 
     await window.api.addTransaction({
-      label,
-      amount: Number(amount),
-      date: new Date()
-        .toISOString()
-        .split("T")[0],
+    label,
+    amount: Number(amount),
+    date,
     });
 
     setLabel("");
@@ -50,6 +89,74 @@ export default function Dashboard() {
 
     loadTransactions();
   };
+
+  const [date, setDate] = useState(
+    new Date().toISOString().split("T")[0]
+    );
+
+  const deleteTransaction = async (id: number) => {
+    await window.api.deleteTransaction(id);
+
+    loadTransactions();
+  };
+
+  const loadRecurringTransactions = async () => {
+    const data: RecurringTransaction[] =
+      await window.api.getRecurringTransactions();
+
+    setRecurringTransactions(data);
+
+    const today = new Date().getDate();
+
+    const remainingRecurring: RecurringTransaction[] =
+      data.filter(
+        (item: RecurringTransaction) =>
+          item.dayOfMonth >= today
+      );
+
+    const recurringTotal: number = remainingRecurring.reduce<number>(
+      (sum: number, item: RecurringTransaction) =>
+        sum + Number(item.amount),
+      0
+    );
+
+    setForecastBalance(
+      Number(balance) - recurringTotal
+    );
+  };
+
+  const addRecurringTransaction = async () => {
+    console.log("CLICK RECURRING");
+  if (
+    !recurringLabel ||
+    !recurringAmount ||
+    !dayOfMonth
+  ) {
+    return;
+  }
+
+  await window.api.addRecurringTransaction({
+    label: recurringLabel,
+    amount: Number(recurringAmount),
+    dayOfMonth: Number(dayOfMonth),
+  });
+
+  setRecurringLabel("");
+  setRecurringAmount("");
+  setDayOfMonth("");
+
+  loadRecurringTransactions();
+};
+
+const deleteRecurringTransaction = async (
+  id: number
+) => {
+  await window.api.deleteRecurringTransaction(
+    id
+  );
+
+  loadRecurringTransactions();
+};
 
   return (
     <div
@@ -82,6 +189,165 @@ export default function Dashboard() {
       </div>
 
       <div
+  style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    marginBottom: "20px",
+  }}
+>
+  <h2>Prélèvements restants</h2>
+
+  <p
+    style={{
+      fontSize: "2rem",
+      fontWeight: "bold",
+      color: "orange",
+    }}
+  >
+    {remainingRecurringAmount.toFixed(2)} €
+  </p>
+</div>
+
+      <div
+  style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    marginBottom: "20px",
+  }}
+>
+  <h2>Ajouter un prélèvement récurrent</h2>
+
+  <div
+    style={{
+      display: "flex",
+      gap: "10px",
+      alignItems: "center",
+      flexWrap: "wrap",
+    }}
+  >
+    <input
+      placeholder="Libellé"
+      value={recurringLabel}
+      onChange={(e) =>
+        setRecurringLabel(e.target.value)
+      }
+    />
+
+    <input
+      type="number"
+      placeholder="Montant"
+      value={recurringAmount}
+      onChange={(e) =>
+        setRecurringAmount(e.target.value)
+      }
+    />
+
+    <input
+      type="number"
+      min="1"
+      max="31"
+      placeholder="Jour"
+      value={dayOfMonth}
+      onChange={(e) =>
+        setDayOfMonth(e.target.value)
+      }
+    />
+
+    <button
+      onClick={addRecurringTransaction}
+    >
+      Ajouter
+    </button>
+  </div>
+</div>
+
+<div
+  style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    marginBottom: "20px",
+  }}
+>
+  <h2>Prélèvements récurrents</h2>
+
+  {recurringTransactions.map((item) => (
+  <div
+    key={item.id}
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "10px 0",
+      borderBottom: "1px solid #eee",
+    }}
+  >
+    <div>
+      <strong>{item.label}</strong>
+      <br />
+      <small>
+        Prélevé le {item.dayOfMonth}
+      </small>
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+      }}
+    >
+      <span
+        style={{
+          fontWeight: "bold",
+          color: "red",
+        }}
+      >
+        {item.amount.toFixed(2)} €
+      </span>
+
+      <button
+        onClick={() =>
+          deleteRecurringTransaction(item.id!)
+        }
+        style={{
+          cursor: "pointer",
+        }}
+      >
+        🗑️
+      </button>
+    </div>
+  </div>
+))}
+</div>
+
+      <div
+  style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    marginBottom: "20px",
+  }}
+>
+  <h2>Solde prévisionnel</h2>
+
+  <p
+    style={{
+      fontSize: "2rem",
+      fontWeight: "bold",
+      color:
+        forecastBalance >= 0
+          ? "green"
+          : "red",
+    }}
+  >
+    {forecastBalance.toFixed(2)} €
+  </p>
+</div>
+
+      <div
         style={{
           padding: "20px",
           border: "1px solid #ddd",
@@ -98,6 +364,11 @@ export default function Dashboard() {
             marginBottom: "10px",
           }}
         >
+            <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            />
           <input
             type="text"
             placeholder="Libellé"
@@ -141,39 +412,48 @@ export default function Dashboard() {
         ) : (
           transactions.map((transaction) => (
             <div
-              key={
-                transaction.id ??
-                `${transaction.label}-${transaction.date}`
-              }
+              key={transaction.id}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
+                alignItems: "center",
                 padding: "12px 0",
-                borderBottom:
-                  "1px solid #eee",
+                borderBottom: "1px solid #eee",
               }}
             >
               <div>
-                <strong>
-                  {transaction.label}
-                </strong>
+                <strong>{transaction.label}</strong>
                 <br />
-                <small>
-                  {transaction.date}
-                </small>
+                <small>{transaction.date}</small>
               </div>
 
               <div
                 style={{
-                  color:
-                    transaction.amount >= 0
-                      ? "green"
-                      : "red",
-                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
                 }}
               >
-                {transaction.amount.toFixed(2)}
-                €
+                <span
+                  style={{
+                    color:
+                      transaction.amount >= 0
+                        ? "green"
+                        : "red",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {transaction.amount.toFixed(2)} €
+                </span>
+
+                <button
+                  onClick={() => deleteTransaction(transaction.id!)}
+                  style={{
+                    cursor: "pointer",
+                  }}
+                >
+                  🗑️
+                </button>
               </div>
             </div>
           ))

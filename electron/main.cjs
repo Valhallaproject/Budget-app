@@ -58,3 +58,62 @@ ipcMain.handle("get-transactions", () => {
     `)
     .all();
 });
+
+ipcMain.handle("delete-transaction", (_, id) => {
+  db.prepare(`
+    DELETE FROM transactions
+    WHERE id = ?
+  `).run(id);
+
+  return true;
+});
+
+
+ipcMain.handle("get-recurring-transactions", () => {
+  const rows = db
+    .prepare(`
+      SELECT *
+      FROM recurring_transactions
+      ORDER BY day_of_month
+    `)
+    .all();
+
+  return rows.map((row) => ({
+    id: row.id,
+    label: row.label,
+    amount: row.amount,
+    dayOfMonth: row.day_of_month,
+  }));
+});
+
+ipcMain.handle(
+  "add-recurring-transaction",
+  (_, recurring) => {
+    db.prepare(`
+      INSERT INTO recurring_transactions (
+        label,
+        amount,
+        day_of_month
+      )
+      VALUES (?, ?, ?)
+    `).run(
+      recurring.label,
+      recurring.amount,
+      recurring.dayOfMonth
+    );
+
+    return true;
+  }
+);
+
+ipcMain.handle(
+  "delete-recurring-transaction",
+  (_, id) => {
+    db.prepare(`
+      DELETE FROM recurring_transactions
+      WHERE id = ?
+    `).run(id);
+
+    return true;
+  }
+);

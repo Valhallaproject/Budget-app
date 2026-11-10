@@ -12,9 +12,8 @@ export interface Transaction {
 }
 
 export interface RecurringTransaction {
-  id: number;
+  id?: number;
   label: string;
   amount: number;
-  dayOfMonth: number;
-  active: boolean;
+  day_of_month: number;
 }

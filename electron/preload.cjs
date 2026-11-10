@@ -13,4 +13,28 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke(
       "get-transactions"
     ),
+
+ deleteTransaction: (id) =>
+  ipcRenderer.invoke(
+    "delete-transaction",
+    id
+  ),
+
+  getRecurringTransactions: () =>
+  ipcRenderer.invoke(
+    "get-recurring-transactions"
+  ),
+
+addRecurringTransaction: (recurring) =>
+  ipcRenderer.invoke(
+    "add-recurring-transaction",
+    recurring
+  ),
+
+  deleteRecurringTransaction: (id) =>
+  ipcRenderer.invoke(
+    "delete-recurring-transaction",
+    id
+  ),
+
 });
